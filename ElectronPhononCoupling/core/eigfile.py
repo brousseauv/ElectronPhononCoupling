@@ -129,7 +129,6 @@ class EigFile(EpcFile):
             degen.append(kpt_degen)
 
         self.degen = degen
-    
         return degen
 
     def make_average(self, arr):

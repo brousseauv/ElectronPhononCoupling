@@ -22,6 +22,7 @@ def compute(
         double_grid = False,
         write = True,
         verbose = False,
+        split_occupied_subspace = False,
 
         # Parameters
         nqpt = 1,
@@ -31,6 +32,7 @@ def compute(
         omega_range = [-0.1, 0.1, 0.001],
         fermi_level = None,
         amu = None,
+        valence = None,
 
         # File names
         rootname = 'epc.out',
@@ -117,6 +119,9 @@ def compute(
     verbose: (False)
         Print information to standard ouput as the calculation proceeds.
 
+    split_occupied_subspace: (False)
+        Splits the Fan and DW contributions from occupied and unoccupied subspaces.
+
 
     Parameters
     ----------
@@ -151,6 +156,10 @@ def compute(
     amu: [ntypat]
         The atomic masses, in amu.
         Will be read from the files if not specified.
+
+    bands_for_se:
+        This will limit the calculation of the frequency-dependent self-energy to a subset of bands.
+        If not specified, all bands will be computed.
 
     Film names
     ----------
@@ -257,14 +266,16 @@ def compute(
                 epca.compute_zp_spectral_function()
 
     if dynamical and split_active:
-
         if renormalization:
 
             if temperature:
                 if double_grid:
                     epca.compute_dynamical_td_renormalization_double_grid()
+                elif split_occupied_subspace:
+                    epca.compute_dynamical_td_renormalization_splitted()
                 else:
                     epca.compute_dynamical_td_renormalization()
+
             else:
                 if double_grid:
 

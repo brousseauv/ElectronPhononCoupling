@@ -46,6 +46,11 @@ class EpcAnalyzer(object):
     temperature_dependent_broadening = None
     zero_point_renormalization_modes = None
 
+    temperature_dependent_renormalization_fan_occ = None
+    temperature_dependent_renormalization_fan_unocc = None
+    temperature_dependent_renormalization_ddw_occ = None
+    temperature_dependent_renormalization_ddw_unocc = None
+
     self_energy = None
     self_energy_T = None
     self_energy_static = None
@@ -77,6 +82,7 @@ class EpcAnalyzer(object):
                  omega_range=[0,0,1],
                  smearing=0.00367,
                  fermi_level = None,
+                 valence = None,
                  amu = None,
 
                  double_smearing = False,
@@ -203,6 +209,12 @@ class EpcAnalyzer(object):
         else:
             self.set_fermi_level(fermi_level)
 
+        # set valence band index
+        if valence is None:
+            self.find_valence()
+        else:
+            self.set_valence(valence)
+
         self.verbose = verbose
 
     @property
@@ -315,6 +327,18 @@ class EpcAnalyzer(object):
         """Set the Fermi level, in Hartree."""
         self.mu = mu
         self.qptanalyzer.mu = mu
+
+    def find_valence(self):
+        """ Find the number of occupied bands (assuming a gapped system) """ 
+        occ = self.qptanalyzer.eig0.get_fermi_function_T0(self.mu)
+        valence = np.max(np.where(occ[0,0,:]!=0))
+        self.set_valence(valence+1)
+
+    def set_valence(self, valence):
+        """ Set the highest occupied band index """
+        self.valence = valence
+        self.qptanalyzer.valence = valence
+
 
     @mpi_watch
     def find_fermi_level(self):
@@ -747,6 +771,26 @@ class EpcAnalyzer(object):
             self.sum_qpt_function('get_zpr_static'))
         self.renormalization_is_dynamical = False
 
+    def compute_dynamical_td_renormalization_splitted(self):
+        """
+        Compute the temperature-dependent renormalization
+        in a dynamical scheme, splitting the Fan/DDW contributions and the 
+        contribution from occupied/unoccupied bands.
+        """
+        self.check_temperatures()
+        self.distribute_workload()
+        self.temperature_dependent_renormalization_fan_occ = self.sum_qpt_function(
+            'get_tdr_dynamical_fan_occ')
+        self.temperature_dependent_renormalization_fan_unocc = self.sum_qpt_function(
+            'get_tdr_dynamical_fan_unocc')
+        self.temperature_dependent_renormalization_ddw_occ = self.sum_qpt_function(
+            'get_tdr_dynamical_ddw_occ')
+        self.temperature_dependent_renormalization_ddw_unocc = self.sum_qpt_function(
+            'get_tdr_dynamical_ddw_unocc')
+
+
+        self.renormalization_is_dynamical = True
+
     def compute_dynamical_td_broadening(self):
         """
         Compute the temperature-dependent broadening in a static scheme
@@ -1113,6 +1157,7 @@ class EpcAnalyzer(object):
 
             ds.createDimension('number_of_temperature', len(self.temperatures))
             ds.createDimension('number_of_frequencies', len(self.omegase))
+            
 
             # Write data on the eigenvalues
             data = ds.createVariable('reduced_coordinates_of_kpoints', 'd',
@@ -1221,6 +1266,51 @@ class EpcAnalyzer(object):
             if self.zero_point_renormalization_modes is not None:
                 zpr_modes[:,0,:,:] = (
                 self.zero_point_renormalization_modes[:,:,:])
+
+            # Fan occ
+            data = ds.createVariable(
+                'temperature_dependent_renormalization_fan_occ','d',
+                ('number_of_spins','number_of_kpoints',
+                 'max_number_of_states','number_of_temperature'))
+
+            if self.temperature_dependent_renormalization_fan_occ is not None:
+                # FIXME number of spin
+                data[0,:,:,:] = (
+                    self.temperature_dependent_renormalization_fan_occ[:,:,:].real)
+
+            # Fan unocc
+            data = ds.createVariable(
+                'temperature_dependent_renormalization_fan_unocc','d',
+                ('number_of_spins','number_of_kpoints',
+                 'max_number_of_states','number_of_temperature'))
+
+            if self.temperature_dependent_renormalization_fan_unocc is not None:
+                # FIXME number of spin
+                data[0,:,:,:] = (
+                    self.temperature_dependent_renormalization_fan_unocc[:,:,:].real)
+
+            # DW occ
+            data = ds.createVariable(
+                'temperature_dependent_renormalization_ddw_occ','d',
+                ('number_of_spins','number_of_kpoints',
+                 'max_number_of_states','number_of_temperature'))
+
+            if self.temperature_dependent_renormalization_ddw_occ is not None:
+                # FIXME number of spin
+                data[0,:,:,:] = (
+                    self.temperature_dependent_renormalization_ddw_occ[:,:,:].real)
+
+            # DW unocc
+            data = ds.createVariable(
+                'temperature_dependent_renormalization_ddw_unocc','d',
+                ('number_of_spins','number_of_kpoints',
+                 'max_number_of_states','number_of_temperature'))
+
+            if self.temperature_dependent_renormalization_ddw_unocc is not None:
+                # FIXME number of spin
+                data[0,:,:,:] = (
+                    self.temperature_dependent_renormalization_ddw_unocc[:,:,:].real)
+
 
             # TDB
             data = ds.createVariable(

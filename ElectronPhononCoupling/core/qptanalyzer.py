@@ -35,6 +35,7 @@ class QptAnalyzer(object):
                  amu=None,
                  asr=True,
                  mu=None,
+                 valence=None,
                  double_smearing = False,
                  smearing_width = 0.0367,
                  smearing_above = 0.00367,
@@ -60,6 +61,7 @@ class QptAnalyzer(object):
         self.omegase = omegase if omegase else list()
         self.temperatures = temperatures if temperatures else list()
         self.mu = mu
+        self.valence = valence
         self.amu = amu
 
         self.double_smearing = double_smearing
@@ -333,7 +335,7 @@ class QptAnalyzer(object):
         return einsum(summation, arr)
 
     def get_fan_ddw_sternheimer(self,
-        mode=False, omega=False, temperature=False, shape=None):
+        mode=False, omega=False, temperature=False, shape=None,split_occ=None):
         """
         Compute the fan and ddw contribution to the self-energy
         obtained from the Sternheimer equation,
@@ -395,7 +397,11 @@ class QptAnalyzer(object):
                                 omega=omega, shape=shape)
         ddw = self.reduce_array(ddw, mode=mode, temperature=temperature,
                                 omega=omega, shape=shape)
-        return fan, ddw
+
+        if split_occ=='occ': #Upper bands contribute only to the unoccupied subspace!!!
+            return 0*fan, 0*ddw
+        else:
+            return fan, ddw
     
     def get_fan_ddw_gkk2_active(self):
         """
@@ -444,7 +450,7 @@ class QptAnalyzer(object):
         return fan, ddw
     
     def get_fan_ddw_active(self, mode=False, omega=False, temperature=False,
-                           dynamical=True, shape=None):
+                           dynamical=True, shape=None,split_occ=None):
         """
         Compute the fan and ddw contributions to the self-energy
         from the active space, that is, the the lower bands.
@@ -526,7 +532,12 @@ class QptAnalyzer(object):
                      - einsum('m,kn->knm', ones(nband), (2*occ0-1)) * smearing_ddw * 1j)
 
         # nmode, nkpt, nband
-        ddw = einsum('knmo,knm->okn', ddw_g2, 1.0 / delta_E_ddw)
+        if split_occ=='occ':
+            ddw = einsum('knmo,knm->okn', ddw_g2[:,:,:self.valence,:], 1.0 / delta_E_ddw[:,:,:self.valence])
+        elif split_occ=='unocc':
+            ddw = einsum('knmo,knm->okn', ddw_g2[:,:,self.valence:,:], 1.0 / delta_E_ddw[:,:,self.valence:])
+        else:
+            ddw = einsum('knmo,knm->okn', ddw_g2, 1.0 / delta_E_ddw)
 
         # nmode, ntemp
         tdep = 2 * n_B + 1
@@ -570,7 +581,14 @@ class QptAnalyzer(object):
         # nkpt, nband, nomegase
         eta = self.get_eta(omega_se)
 
-        for jband in range(self.nband):
+        if split_occ=='occ': 
+            summed_bands = range(self.valence)
+        elif split_occ=='unocc':
+            summed_bands = list(np.arange(self.valence,self.nband))
+        else:
+            summed_bands = range(self.nband)
+
+        for jband in summed_bands:
 
             # nkpt, nband
             delta_E = (
@@ -621,7 +639,7 @@ class QptAnalyzer(object):
         return fan, ddw
 
     def get_fan_ddw(self, mode=False, temperature=False,
-                    omega=False, dynamical=False, shape=None):
+                    omega=False, dynamical=False, shape=None,split_occ=None):
         """
         Compute the sum of the Fan and the Diagonal Debye-Waller term.
 
@@ -637,6 +655,7 @@ class QptAnalyzer(object):
         dynamical:
             Use the full dynamical theory by including the phonon frequencies
             in the location of the poles of the self-energy.
+        split_occ : Keep only the contribution from the occupied or unoccupied subspace.
 
         """
 
@@ -644,7 +663,8 @@ class QptAnalyzer(object):
             mode=mode,
             temperature=temperature,
             omega=omega,
-            shape=shape,
+            #shape=shape,
+            split_occ=split_occ,
             )
 
         fan_stern, ddw_stern = self.get_fan_ddw_sternheimer(**kwargs)
@@ -666,6 +686,7 @@ class QptAnalyzer(object):
                         only_active=False,
                         only_fan=False,
                         only_ddw=False,
+                        split_occ=None,
                         real=False,
                         imag=False,
                         shape=None,
@@ -696,13 +717,17 @@ class QptAnalyzer(object):
         only_ddw:
             Only include the (frequency independent) diagonal Debye-Waller term.
 
+        split_occ:
+            Split the contributions of occupied and unoccupied bands
+            Can be 'occ','unocc' or 'None'
         """
 
         kwargs = dict(
             mode=mode,
             temperature=temperature,
             omega=omega,
-            #shape=shape,
+            shape=shape,
+            split_occ=split_occ,
             )
 
         if only_sternheimer and only_active:
@@ -1169,6 +1194,82 @@ class QptAnalyzer(object):
             )
         # nkpt, nband, ntemp
         return self.zpr
+
+    def get_tdr_dynamical_fan_occ(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a dynamical scheme.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=True,
+            only_sternheimer=False,
+            only_active=False,
+            only_fan=True,
+            split_occ='occ',
+            real=True,
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_dynamical_fan_unocc(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a dynamical scheme.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=True,
+            only_sternheimer=False,
+            only_active=False,
+            only_fan=True,
+            split_occ='unocc',
+            real=True,
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_dynamical_ddw_occ(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a dynamical scheme.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=True,
+            only_sternheimer=False,
+            only_active=False,
+            only_ddw=True,
+            split_occ='occ',
+            real=True,
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_dynamical_ddw_unocc(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a dynamical scheme.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=True,
+            only_sternheimer=False,
+            only_active=False,
+            only_ddw=True,
+            split_occ='unocc',
+            real=True,
+            shape='knt',
+            )
+        return self.tdr
 
     def get_zpr_dynamical_active_modes(self):
         """
