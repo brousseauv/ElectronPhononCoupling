@@ -208,6 +208,7 @@ class EpcAnalyzer(object):
             self.find_fermi_level()
         else:
             self.set_fermi_level(fermi_level)
+        print('Fermi level :{} Ha'.format(self.mu))
 
         # set valence band index
         if valence is None:
