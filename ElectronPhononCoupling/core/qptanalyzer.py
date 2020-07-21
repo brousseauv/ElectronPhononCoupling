@@ -631,7 +631,7 @@ class QptAnalyzer(object):
             fan += einsum('kno,oknlt->otlkn', fan_g2[:,:,jband,:], div1 + div2)
     
             del div1, div2
-      
+
         # Reduce the arrays
         fan = self.reduce_array(fan, mode=mode, temperature=temperature,
                                 omega=omega, shape=shape)
@@ -726,7 +726,7 @@ class QptAnalyzer(object):
             mode=mode,
             temperature=temperature,
             omega=omega,
-            shape=shape,
+            #shape=shape,
             split_occ=split_occ,
             )
 
@@ -1270,6 +1270,171 @@ class QptAnalyzer(object):
             shape='knt',
             )
         return self.tdr
+
+    def get_tdr_static_nosplit_fan_occ(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a static scheme,
+        Fan contribution from the occupied bands only.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=False,
+            only_sternheimer=True,
+            only_active=False,
+            real=True,
+            only_fan=True,
+            split_occ='occ',
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_static_nosplit_fan_unocc(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a static scheme,
+        Fan contribution from the unoccupied bands only.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=False,
+            only_sternheimer=True,
+            only_active=False,
+            real=True,
+            only_fan=True,
+            split_occ='unocc',
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_static_nosplit_ddw_occ(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a static scheme,
+        Debye-Waller contribution from the occupied bands only.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=False,
+            only_sternheimer=True,
+            only_active=False,
+            real=True,
+            only_ddw=True,
+            split_occ='occ',
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_static_nosplit_ddw_unocc(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a static scheme,
+        Debye-Waller contribution from the unoccupied bands only.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=False,
+            only_sternheimer=True,
+            only_active=False,
+            real=True,
+            only_ddw=True,
+            split_occ='unocc',
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_dynamical_active_fan_occ(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a dynamical scheme,
+        taking only the active space contribution,
+        Fan term + occupied bands only.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=True,
+            only_sternheimer=False,
+            only_active=True,
+            only_fan=True,
+            split_occ='occ',
+            real=True,
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_dynamical_active_fan_unocc(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a dynamical scheme,
+        taking only the active space contribution,
+        Fan term + unoccupied bands only.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=True,
+            only_sternheimer=False,
+            only_active=True,
+            only_fan=True,
+            split_occ='unocc',
+            real=True,
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_dynamical_active_ddw_occ(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a dynamical scheme,
+        taking only the active space contribution,
+        Debye-Waller term + occupied bands only.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=True,
+            only_sternheimer=False,
+            only_active=True,
+            only_ddw=True,
+            split_occ='occ',
+            real=True,
+            shape='knt',
+            )
+        return self.tdr
+
+    def get_tdr_dynamical_active_ddw_unocc(self):
+        """
+        Compute the q-point contribution to the temperature-dependent
+        renormalization in a dynamical scheme,
+        taking only the active space contribution,
+        Fan term + occupied bands only.
+        """
+        self.tdr = self.get_self_energy(
+            mode=False,
+            temperature=True,
+            omega=False,
+            dynamical=True,
+            only_sternheimer=False,
+            only_active=True,
+            only_ddw=True,
+            split_occ='unocc',
+            real=True,
+            shape='knt',
+            )
+        return self.tdr
+
 
     def get_zpr_dynamical_active_modes(self):
         """

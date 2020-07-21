@@ -275,7 +275,10 @@ def compute(
                     epca.compute_dynamical_td_renormalization()
 
                 if split_occupied_subspace:
-                    epca.compute_dynamical_td_renormalization_splitted()
+                    if double_grid:
+                        epca.compute_dynamical_td_renormalization_double_grid_splitted()
+                    else:
+                        epca.compute_dynamical_td_renormalization_splitted()
 
             else:
                 if double_grid:

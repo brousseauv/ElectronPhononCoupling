@@ -155,7 +155,7 @@ class EigFile(EpcFile):
             self.get_degen()
 
         nkpt, nband = arr.shape[-2:]
-    
+
         for ikpt in range(nkpt):
             for group in self.degen[ikpt]:
                 average = copy(arr[...,ikpt,group[0][1]])

@@ -792,6 +792,27 @@ class EpcAnalyzer(object):
 
         self.renormalization_is_dynamical = True
 
+    def compute_dynamical_td_renormalization_double_grid_splitted(self):
+        """
+        Compute the temperature-dependent renormalization
+        in a dynamical scheme, splitting the Fan/DDW contributions and the 
+        contribution from occupied/unoccupied bands, using the double grid scheme.
+        """
+        self.check_temperatures()
+        self.distribute_workload()
+        self.temperature_dependent_renormalization_fan_occ = self.sum_qpt_functions_double_grid(
+            'get_tdr_static_nosplit_fan_occ','get_tdr_dynamical_active_fan_occ')
+        self.temperature_dependent_renormalization_fan_unocc = self.sum_qpt_functions_double_grid(
+            'get_tdr_static_nosplit_fan_unocc','get_tdr_dynamical_active_fan_unocc')
+        self.temperature_dependent_renormalization_ddw_occ = self.sum_qpt_functions_double_grid(
+            'get_tdr_static_nosplit_ddw_occ','get_tdr_dynamical_active_ddw_occ')
+        self.temperature_dependent_renormalization_ddw_unocc = self.sum_qpt_functions_double_grid(
+            'get_tdr_static_nosplit_ddw_unocc','get_tdr_dynamical_active_ddw_unocc')
+
+
+        self.renormalization_is_dynamical = True
+
+
     def compute_dynamical_td_broadening(self):
         """
         Compute the temperature-dependent broadening in a static scheme
